@@ -1,0 +1,26 @@
+{
+  "name": "node-mayhem",
+  "version": "0.0.0",
+  "description": "Mayhem",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "Jean-Charles Sisk <jeancharles@where.com>",
+  "license": "BSD",
+  "dependencies": {
+    "dnode": "~1.0.4",
+    "ecstatic": "~0.4.0",
+    "shoe": "0.0.7",
+    "domready": "~0.2.11",
+    "event-stream": "~3.0.11",
+    "connect": "~2.7.3",
+    "node-uuid": "~1.4.0",
+    "levelup": "~0.6.0",
+    "reconnect": "~1.0.2"
+  },
+  "devDependencies": {
+    "browserify": "~2.3.1"
+  }
+}
