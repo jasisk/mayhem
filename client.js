@@ -52,6 +52,13 @@ domready(function(){
         textbox.style.display = "block";
         textbox.textContent = text;
         if (cb) { cb("Set text."); }
+      },
+      youtube: function(idOrLink, cb){
+        iframe.style.display = "none";
+        textbox.style.display = "block";
+        textbox.innerHTML = "";
+        Youtube.loadVideo(idOrLink, { loop: 1 });
+        if (cb) { cb("Set youtube."); }
       }
     });
     d.on('remote', function(remote){
@@ -66,4 +73,7 @@ domready(function(){
     });
     d.pipe(stream).pipe(d);
   }).connect('/command');
+
+  Youtube.setContainer($(textbox));
+  $(window).resize(debounce(Youtube.resizeVideo, 300));
 });

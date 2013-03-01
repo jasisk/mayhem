@@ -52,6 +52,13 @@ domready(function(){
         textbox.style.display = "block";
         textbox.textContent = text;
         if (cb) { cb("Set text."); }
+      },
+      youtube: function(idOrLink, cb){
+        iframe.style.display = "none";
+        textbox.style.display = "block";
+        textbox.innerHTML = "";
+        Youtube.loadVideo(idOrLink, { loop: 1 });
+        if (cb) { cb("Set youtube."); }
       }
     });
     d.on('remote', function(remote){
@@ -66,6 +73,9 @@ domready(function(){
     });
     d.pipe(stream).pipe(d);
   }).connect('/command');
+
+  Youtube.setContainer($(textbox));
+  $(window).resize(debounce(Youtube.resizeVideo, 300));
 });
 },{"domready":2,"shoe":3,"dnode":4,"reconnect":5}],2:[function(require,module,exports){/*!
   * domready (c) Dustin Diaz 2012 - License MIT
@@ -4077,8 +4087,8 @@ dnode.prototype.write = function (buf) {
             if (buf.charCodeAt(i) === 0x0a) {
                 try { row = json.parse(self._line) }
                 catch (err) { return self.end() }
-                self._line = '';
                 
+                self._line = '';
                 self.handle(row);
             }
             else self._line += buf.charAt(i)
