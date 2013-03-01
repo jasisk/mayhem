@@ -59,6 +59,25 @@ domready(function(){
         textbox.innerHTML = "";
         Youtube.loadVideo(idOrLink, { loop: 1 });
         if (cb) { cb("Set youtube."); }
+      },
+      pdf: function(pdfLink, cb){
+        iframe.style.display = "none";
+        textbox.style.display = "block";
+        textbox.innerHTML = "<div id='pdf-slideshow'></div>";
+
+        var scribd_doc = scribd.Document.getDocFromUrl(pdfLink, "pub-30476398382781026969");
+        scribd_doc.addParam('jsapi_version', 2);
+        scribd_doc.addParam('mode', 'slideshow');
+        scribd_doc.write('pdf-slideshow');
+
+        window.scribd_doc = scribd_doc;
+
+        if (cb) { cb("Set pdf."); }
+      },
+      pdf_page: function(page, cb){
+        if (window.scribd_doc && window.scribd_doc.api) {
+          window.scribd_doc.api.setPage(page);
+        }
       }
     });
     d.on('remote', function(remote){

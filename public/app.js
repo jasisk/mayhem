@@ -59,6 +59,25 @@ domready(function(){
         textbox.innerHTML = "";
         Youtube.loadVideo(idOrLink, { loop: 1 });
         if (cb) { cb("Set youtube."); }
+      },
+      pdf: function(pdfLink, cb){
+        iframe.style.display = "none";
+        textbox.style.display = "block";
+        textbox.innerHTML = "<div id='pdf-slideshow'></div>";
+
+        var scribd_doc = scribd.Document.getDocFromUrl(pdfLink, "pub-30476398382781026969");
+        scribd_doc.addParam('jsapi_version', 2);
+        scribd_doc.addParam('mode', 'slideshow');
+        scribd_doc.write('pdf-slideshow');
+
+        window.scribd_doc = scribd_doc;
+
+        if (cb) { cb("Set pdf."); }
+      },
+      pdf_page: function(page, cb){
+        if (window.scribd_doc && window.scribd_doc.api) {
+          window.scribd_doc.api.setPage(page);
+        }
       }
     });
     d.on('remote', function(remote){
@@ -3351,39 +3370,7 @@ function (createConnection) {
 
 }
 
-},{"events":7,"./widget":12,"backoff":13}],13:[function(require,module,exports){/*
- * Copyright (c) 2012 Mathieu Turcotte
- * Licensed under the MIT license.
- */
-
-var Backoff = require('./lib/backoff'),
-    FibonacciBackoffStrategy = require('./lib/strategy/fibonacci'),
-    ExponentialBackoffStrategy = require('./lib/strategy/exponential');
-
-module.exports.Backoff = Backoff;
-module.exports.FibonacciStrategy = FibonacciBackoffStrategy;
-module.exports.ExponentialStrategy = ExponentialBackoffStrategy;
-
-/**
- * Constructs a Fibonacci backoff.
- * @param options Fibonacci backoff strategy arguments.
- * @see FibonacciBackoffStrategy
- */
-module.exports.fibonacci = function(options) {
-    return new Backoff(new FibonacciBackoffStrategy(options));
-};
-
-/**
- * Constructs an exponential backoff.
- * @param options Exponential strategy arguments.
- * @see ExponentialBackoffStrategy
- */
-module.exports.exponential = function(options) {
-    return new Backoff(new ExponentialBackoffStrategy(options));
-};
-
-
-},{"./lib/backoff":14,"./lib/strategy/fibonacci":15,"./lib/strategy/exponential":16}],12:[function(require,module,exports){
+},{"events":7,"./widget":12,"backoff":13}],12:[function(require,module,exports){
 var h = require('hyperscript')
 var o = require('observable')
 //TODO make this just a small square that goes red/orange/green
@@ -3431,70 +3418,39 @@ module.exports = function (emitter) {
   return el
 }
 
-},{"hyperscript":17,"observable":18}],14:[function(require,module,exports){/*
+},{"hyperscript":14,"observable":15}],13:[function(require,module,exports){/*
  * Copyright (c) 2012 Mathieu Turcotte
  * Licensed under the MIT license.
  */
 
-var events = require('events'),
-    util = require('util');
+var Backoff = require('./lib/backoff'),
+    FibonacciBackoffStrategy = require('./lib/strategy/fibonacci'),
+    ExponentialBackoffStrategy = require('./lib/strategy/exponential');
+
+module.exports.Backoff = Backoff;
+module.exports.FibonacciStrategy = FibonacciBackoffStrategy;
+module.exports.ExponentialStrategy = ExponentialBackoffStrategy;
 
 /**
- * Backoff driver.
- * @param backoffStrategy Backoff delay generator/strategy.
- * @constructor
+ * Constructs a Fibonacci backoff.
+ * @param options Fibonacci backoff strategy arguments.
+ * @see FibonacciBackoffStrategy
  */
-function Backoff(backoffStrategy) {
-    events.EventEmitter.call(this);
-
-    this.backoffStrategy_ = backoffStrategy;
-    this.backoffNumber_ = 0;
-    this.backoffDelay_ = 0;
-    this.timeoutID_ = -1;
-
-    this.handlers = {
-        backoff: this.onBackoff_.bind(this)
-    };
-}
-util.inherits(Backoff, events.EventEmitter);
-
-/**
- * Starts a backoff operation.
- */
-Backoff.prototype.backoff = function() {
-    if (this.timeoutID_ !== -1) {
-        throw new Error('Backoff in progress.');
-    }
-
-    this.backoffDelay_ = this.backoffStrategy_.next();
-    this.timeoutID_ = setTimeout(this.handlers.backoff, this.backoffDelay_);
-    this.emit('backoff', this.backoffNumber_, this.backoffDelay_);
+module.exports.fibonacci = function(options) {
+    return new Backoff(new FibonacciBackoffStrategy(options));
 };
 
 /**
- * Backoff completion handler.
- * @private
+ * Constructs an exponential backoff.
+ * @param options Exponential strategy arguments.
+ * @see ExponentialBackoffStrategy
  */
-Backoff.prototype.onBackoff_ = function() {
-    this.timeoutID_ = -1;
-    this.emit('ready', this.backoffNumber_++, this.backoffDelay_);
+module.exports.exponential = function(options) {
+    return new Backoff(new ExponentialBackoffStrategy(options));
 };
 
-/**
- * Stops any backoff operation and resets the backoff
- * delay to its inital value.
- */
-Backoff.prototype.reset = function() {
-    this.backoffNumber_ = 0;
-    this.backoffStrategy_.reset();
-    clearTimeout(this.timeoutID_);
-    this.timeoutID_ = -1;
-};
 
-module.exports = Backoff;
-
-
-},{"events":7,"util":8}],17:[function(require,module,exports){;(function () {
+},{"./lib/backoff":16,"./lib/strategy/fibonacci":17,"./lib/strategy/exponential":18}],14:[function(require,module,exports){;(function () {
 
 function h() {
   var args = [].slice.call(arguments), e = null
@@ -3588,7 +3544,70 @@ else
   this.hyperscript = h
 })()
 
-},{}],18:[function(require,module,exports){;(function () {
+},{}],16:[function(require,module,exports){/*
+ * Copyright (c) 2012 Mathieu Turcotte
+ * Licensed under the MIT license.
+ */
+
+var events = require('events'),
+    util = require('util');
+
+/**
+ * Backoff driver.
+ * @param backoffStrategy Backoff delay generator/strategy.
+ * @constructor
+ */
+function Backoff(backoffStrategy) {
+    events.EventEmitter.call(this);
+
+    this.backoffStrategy_ = backoffStrategy;
+    this.backoffNumber_ = 0;
+    this.backoffDelay_ = 0;
+    this.timeoutID_ = -1;
+
+    this.handlers = {
+        backoff: this.onBackoff_.bind(this)
+    };
+}
+util.inherits(Backoff, events.EventEmitter);
+
+/**
+ * Starts a backoff operation.
+ */
+Backoff.prototype.backoff = function() {
+    if (this.timeoutID_ !== -1) {
+        throw new Error('Backoff in progress.');
+    }
+
+    this.backoffDelay_ = this.backoffStrategy_.next();
+    this.timeoutID_ = setTimeout(this.handlers.backoff, this.backoffDelay_);
+    this.emit('backoff', this.backoffNumber_, this.backoffDelay_);
+};
+
+/**
+ * Backoff completion handler.
+ * @private
+ */
+Backoff.prototype.onBackoff_ = function() {
+    this.timeoutID_ = -1;
+    this.emit('ready', this.backoffNumber_++, this.backoffDelay_);
+};
+
+/**
+ * Stops any backoff operation and resets the backoff
+ * delay to its inital value.
+ */
+Backoff.prototype.reset = function() {
+    this.backoffNumber_ = 0;
+    this.backoffStrategy_.reset();
+    clearTimeout(this.timeoutID_);
+    this.timeoutID_ = -1;
+};
+
+module.exports = Backoff;
+
+
+},{"events":7,"util":8}],15:[function(require,module,exports){;(function () {
 
 // bind a to b -- One Way Binding
 function bind1(a, b) {
@@ -3785,7 +3804,7 @@ if('object' === typeof module) module.exports = exports
 else                           this.observable = exports
 })()
 
-},{}],15:[function(require,module,exports){/*
+},{}],17:[function(require,module,exports){/*
  * Copyright (c) 2012 Mathieu Turcotte
  * Licensed under the MIT license.
  */
@@ -3822,7 +3841,7 @@ FibonacciBackoffStrategy.prototype.reset_ = function() {
 module.exports = FibonacciBackoffStrategy;
 
 
-},{"util":8,"./strategy":19}],16:[function(require,module,exports){/*
+},{"util":8,"./strategy":19}],18:[function(require,module,exports){/*
  * Copyright (c) 2012 Mathieu Turcotte
  * Licensed under the MIT license.
  */
