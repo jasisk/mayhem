@@ -23,7 +23,7 @@ domready(function(){
 
   window.addEventListener("resize", function(){
     textbox.style.height = window.innerHeight + "px";
-    iframe.style.height = window.innerHeight + "px";    
+    iframe.style.height = window.innerHeight + "px";
   }, false);
   document.body.appendChild(textbox);
   document.body.appendChild(iframe);
@@ -52,6 +52,11 @@ domready(function(){
         textbox.style.display = "block";
         textbox.textContent = text;
         if (cb) { cb("Set text."); }
+      },
+      exit: function(src, cb){
+        src = src || "about:blank";
+        if (cb) { cb("exiting."); }
+        window.location = src;
       }
     });
     d.on('remote', function(remote){
@@ -3421,7 +3426,13 @@ module.exports = function (emitter) {
   return el
 }
 
-},{"hyperscript":17,"observable":18}],14:[function(require,module,exports){/*
+},{"hyperscript":17,"observable":18}],4:[function(require,module,exports){var dnode = require('./lib/dnode');
+
+module.exports = function (cons, opts) {
+    return new dnode(cons, opts);
+};
+
+},{"./lib/dnode":19}],14:[function(require,module,exports){/*
  * Copyright (c) 2012 Mathieu Turcotte
  * Licensed under the MIT license.
  */
@@ -3484,101 +3495,7 @@ Backoff.prototype.reset = function() {
 module.exports = Backoff;
 
 
-},{"events":7,"util":8}],17:[function(require,module,exports){;(function () {
-
-function h() {
-  var args = [].slice.call(arguments), e = null
-  function item (l) {
-    var r
-    function parseClass (string) {
-      var m = string.split(/([\.#]?[a-zA-Z0-9_-]+)/)
-      m.forEach(function (v) {
-        var s = v.substring(1,v.length)
-        if(!v) return 
-        if(!e)
-          e = document.createElement(v)
-        else if (v[0] === '.')
-          e.classList.add(s)
-        else if (v[0] === '#')
-          e.setAttribute('id', s)
-      })
-    }
-
-    if(l == null)
-      ;
-    else if('string' === typeof l) {
-      if(!e)
-        parseClass(l)
-      else
-        e.appendChild(r = document.createTextNode(l))
-    }
-    else if('number' === typeof l 
-      || 'boolean' === typeof l
-      || l instanceof Date 
-      || l instanceof RegExp ) {
-        e.appendChild(r = document.createTextNode(l.toString()))
-    }
-    //there might be a better way to handle this...
-    else if (Array.isArray(l))
-      l.forEach(item)
-    else if(l instanceof Node)
-      e.appendChild(r = l)
-    else if(l instanceof Text)
-      e.appendChild(r = l)
-    else if ('object' === typeof l) {
-      for (var k in l) {
-        if('function' === typeof l[k]) {
-          if(/^on\w+/.test(k)) {
-            e.addEventListener(k.substring(2), l[k])
-          } else {
-            e[k] = l[k]()
-            l[k](function (v) {
-              e[k] = v
-            })
-          }
-        }
-        else if(k === 'style') {
-          for (var s in l[k]) (function(s, v) {
-            if('function' === typeof v) {
-              e.style.setProperty(s, v())
-              v(function (val) {
-                e.style.setProperty(s, val)
-              })
-            } else
-              e.style.setProperty(s, l[k][s])
-          })(s, l[k][s])
-        } else
-          e[k] = l[k]
-      }
-    } else if ('function' === typeof l) {
-      //assume it's an observable!
-      var v = l()
-      e.appendChild(r = v instanceof Node ? v : document.createTextNode(v))
-
-      l(function (v) {
-        if(v instanceof Node && r.parentElement)
-          r.parentElement.replaceChild(v, r), r = v
-        else
-          r.textContent = v
-      })
-      
-    }
-
-    return r
-  }
-  while(args.length)
-    item(args.shift())
-
-  return e
-}
-
-if(typeof module === 'object')
- module.exports = h
-else
-  this.hyperscript = h
-})()
-
-},{}],18:[function(require,module,exports){;(function () {
+},{"events":7,"util":8}],18:[function(require,module,exports){;(function () {
 
 // bind a to b -- One Way Binding
 function bind1(a, b) {
@@ -3662,6 +3579,8 @@ only 8 lines! that isn't much for what this baby can do!
 */
 
 function transform (observable, down, up) {
+  if('function' !== typeof observable)
+    throw new Error('transform expects an observable')
   return function (val) {
     return (
       isGet(val) ? down(observable())
@@ -3812,7 +3731,7 @@ FibonacciBackoffStrategy.prototype.reset_ = function() {
 module.exports = FibonacciBackoffStrategy;
 
 
-},{"util":8,"./strategy":19}],16:[function(require,module,exports){/*
+},{"util":8,"./strategy":20}],16:[function(require,module,exports){/*
  * Copyright (c) 2012 Mathieu Turcotte
  * Licensed under the MIT license.
  */
@@ -3848,7 +3767,7 @@ ExponentialBackoffStrategy.prototype.reset_ = function() {
 module.exports = ExponentialBackoffStrategy;
 
 
-},{"util":8,"./strategy":19}],19:[function(require,module,exports){/*
+},{"util":8,"./strategy":20}],20:[function(require,module,exports){/*
  * Copyright (c) 2012 Mathieu Turcotte
  * Licensed under the MIT license.
  */
@@ -3946,13 +3865,322 @@ BackoffStrategy.prototype.reset_ = function() {
 module.exports = BackoffStrategy;
 
 
-},{"events":7,"util":8}],4:[function(require,module,exports){var dnode = require('./lib/dnode');
+},{"events":7,"util":8}],17:[function(require,module,exports){var split = require('browser-split')
+var ClassList = require('class-list')
 
-module.exports = function (cons, opts) {
-    return new dnode(cons, opts);
-};
+module.exports = h
 
-},{"./lib/dnode":20}],20:[function(require,module,exports){(function(process){var protocol = require('dnode-protocol');
+function h() {
+  var args = [].slice.call(arguments), e = null
+  function item (l) {
+    var r
+    function parseClass (string) {
+      var m = split(string, /([\.#]?[a-zA-Z0-9_-]+)/)
+      forEach(m, function (v) {
+        var s = v.substring(1,v.length)
+        if(!v) return
+        if(!e)
+          e = document.createElement(v)
+        else if (v[0] === '.')
+          ClassList(e).add(s)
+        else if (v[0] === '#')
+          e.setAttribute('id', s)
+      })
+    }
+
+    if(l == null)
+      ;
+    else if('string' === typeof l) {
+      if(!e)
+        parseClass(l)
+      else
+        e.appendChild(r = document.createTextNode(l))
+    }
+    else if('number' === typeof l
+      || 'boolean' === typeof l
+      || l instanceof Date
+      || l instanceof RegExp ) {
+        e.appendChild(r = document.createTextNode(l.toString()))
+    }
+    //there might be a better way to handle this...
+    else if (isArray(l))
+      forEach(l, item)
+    else if(isNode(l))
+      e.appendChild(r = l)
+    else if(l instanceof Text)
+      e.appendChild(r = l)
+    else if ('object' === typeof l) {
+      for (var k in l) {
+        if('function' === typeof l[k]) {
+          if(/^on\w+/.test(k)) {
+            e.addEventListener
+              ? e.addEventListener(k.substring(2), l[k])
+              : e.attachEvent(k, l[k])
+          } else {
+            e[k] = l[k]()
+            l[k](function (v) {
+              e[k] = v
+            })
+          }
+        }
+        else if(k === 'style') {
+          for (var s in l[k]) (function(s, v) {
+            if('function' === typeof v) {
+              e.style.setProperty(s, v())
+              v(function (val) {
+                e.style.setProperty(s, val)
+              })
+            } else
+              e.style.setProperty(s, l[k][s])
+          })(s, l[k][s])
+        } else
+          e[k] = l[k]
+      }
+    } else if ('function' === typeof l) {
+      //assume it's an observable!
+      var v = l()
+      e.appendChild(r = isNode(v) ? v : document.createTextNode(v))
+
+      l(function (v) {
+        if(isNode(v) && r.parentElement)
+          r.parentElement.replaceChild(v, r), r = v
+        else
+          r.textContent = v
+      })
+
+    }
+
+    return r
+  }
+  while(args.length)
+    item(args.shift())
+
+  return e
+}
+
+function isNode (el) {
+  return typeof Node != 'undefined'
+    ? el instanceof Node
+    : el instanceof Element
+}
+
+function forEach (arr, fn) {
+  if (arr.forEach) return arr.forEach(fn)
+  for (var i = 0; i < arr.length; i++) fn(arr[i], i)
+}
+
+function isArray (arr) {
+  return Object.prototype.toString.call(arr) == '[object Array]'
+}
+
+},{"browser-split":21,"class-list":22}],21:[function(require,module,exports){(function(){/*!
+ * Cross-Browser Split 1.1.1
+ * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
+ * Available under the MIT License
+ * ECMAScript compliant, uniform cross-browser split method
+ */
+
+/**
+ * Splits a string into an array of strings using a regex or string separator. Matches of the
+ * separator are not included in the result array. However, if `separator` is a regex that contains
+ * capturing groups, backreferences are spliced into the result each time `separator` is matched.
+ * Fixes browser bugs compared to the native `String.prototype.split` and can be used reliably
+ * cross-browser.
+ * @param {String} str String to split.
+ * @param {RegExp|String} separator Regex or string to use for separating the string.
+ * @param {Number} [limit] Maximum number of items to include in the result array.
+ * @returns {Array} Array of substrings.
+ * @example
+ *
+ * // Basic use
+ * split('a b c d', ' ');
+ * // -> ['a', 'b', 'c', 'd']
+ *
+ * // With limit
+ * split('a b c d', ' ', 2);
+ * // -> ['a', 'b']
+ *
+ * // Backreferences in result array
+ * split('..word1 word2..', /([a-z]+)(\d+)/i);
+ * // -> ['..', 'word', '1', ' ', 'word', '2', '..']
+ */
+module.exports = (function split(undef) {
+
+  var nativeSplit = String.prototype.split,
+    compliantExecNpcg = /()??/.exec("")[1] === undef,
+    // NPCG: nonparticipating capturing group
+    self;
+
+  self = function(str, separator, limit) {
+    // If `separator` is not a regex, use `nativeSplit`
+    if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
+      return nativeSplit.call(str, separator, limit);
+    }
+    var output = [],
+      flags = (separator.ignoreCase ? "i" : "") + (separator.multiline ? "m" : "") + (separator.extended ? "x" : "") + // Proposed for ES6
+      (separator.sticky ? "y" : ""),
+      // Firefox 3+
+      lastLastIndex = 0,
+      // Make `global` and avoid `lastIndex` issues by working with a copy
+      separator = new RegExp(separator.source, flags + "g"),
+      separator2, match, lastIndex, lastLength;
+    str += ""; // Type-convert
+    if (!compliantExecNpcg) {
+      // Doesn't need flags gy, but they don't hurt
+      separator2 = new RegExp("^" + separator.source + "$(?!\\s)", flags);
+    }
+    /* Values for `limit`, per the spec:
+     * If undefined: 4294967295 // Math.pow(2, 32) - 1
+     * If 0, Infinity, or NaN: 0
+     * If positive number: limit = Math.floor(limit); if (limit > 4294967295) limit -= 4294967296;
+     * If negative number: 4294967296 - Math.floor(Math.abs(limit))
+     * If other: Type-convert, then use the above rules
+     */
+    limit = limit === undef ? -1 >>> 0 : // Math.pow(2, 32) - 1
+    limit >>> 0; // ToUint32(limit)
+    while (match = separator.exec(str)) {
+      // `separator.lastIndex` is not reliable cross-browser
+      lastIndex = match.index + match[0].length;
+      if (lastIndex > lastLastIndex) {
+        output.push(str.slice(lastLastIndex, match.index));
+        // Fix browsers whose `exec` methods don't consistently return `undefined` for
+        // nonparticipating capturing groups
+        if (!compliantExecNpcg && match.length > 1) {
+          match[0].replace(separator2, function() {
+            for (var i = 1; i < arguments.length - 2; i++) {
+              if (arguments[i] === undef) {
+                match[i] = undef;
+              }
+            }
+          });
+        }
+        if (match.length > 1 && match.index < str.length) {
+          Array.prototype.push.apply(output, match.slice(1));
+        }
+        lastLength = match[0].length;
+        lastLastIndex = lastIndex;
+        if (output.length >= limit) {
+          break;
+        }
+      }
+      if (separator.lastIndex === match.index) {
+        separator.lastIndex++; // Avoid an infinite loop
+      }
+    }
+    if (lastLastIndex === str.length) {
+      if (lastLength || !separator.test("")) {
+        output.push("");
+      }
+    } else {
+      output.push(str.slice(lastLastIndex));
+    }
+    return output.length > limit ? output.slice(0, limit) : output;
+  };
+
+  return self;
+})();
+
+})()
+},{}],22:[function(require,module,exports){// contains, add, remove, toggle
+
+module.exports = ClassList
+
+function ClassList(elem) {
+    var cl = elem.classList
+
+    if (cl) {
+        return cl
+    }
+
+    var classList = {
+        add: add
+        , remove: remove
+        , contains: contains
+        , toggle: toggle
+        , toString: $toString
+        , length: 0
+        , item: item
+    }
+
+    return classList
+
+    function add(token) {
+        var list = getTokens()
+        if (list.indexOf(token) > -1) {
+            return
+        }
+        list.push(token)
+        setTokens(list)
+    }
+
+    function remove(token) {
+        var list = getTokens()
+            , index = list.indexOf(token)
+
+        if (index === -1) {
+            return
+        }
+
+        list.splice(index, 1)
+        setTokens(list)
+    }
+
+    function contains(token) {
+        return getTokens().indexOf(token) > -1
+    }
+
+    function toggle(token) {
+        if (contains(token)) {
+            remove(token)
+            return false
+        } else {
+            add(token)
+            return true
+        }
+    }
+
+    function $toString() {
+        return elem.className
+    }
+
+    function item(index) {
+        var tokens = getTokens()
+        return tokens[index] || null
+    }
+
+    function getTokens() {
+        var className = elem.className
+
+        return filter(className.split(" "), isTruthy)
+    }
+
+    function setTokens(list) {
+        var length = list.length
+
+        elem.className = list.join(" ")
+        classList.length = length
+
+        for (var i = 0; i < list.length; i++) {
+            classList[i] = list[i]
+        }
+
+        delete list[length]
+    }
+}
+
+function filter (arr, fn) {
+    var ret = []
+    for (var i = 0; i < arr.length; i++) {
+        if (fn(arr[i])) ret.push(arr[i])
+    }
+    return ret
+}
+
+function isTruthy(value) {
+    return !!value
+}
+
+},{}],19:[function(require,module,exports){(function(process){var protocol = require('dnode-protocol');
 var Stream = require('stream');
 var json = typeof JSON === 'object' ? JSON : require('jsonify');
 
@@ -4077,8 +4305,8 @@ dnode.prototype.write = function (buf) {
             if (buf.charCodeAt(i) === 0x0a) {
                 try { row = json.parse(self._line) }
                 catch (err) { return self.end() }
-                self._line = '';
                 
+                self._line = '';
                 self.handle(row);
             }
             else self._line += buf.charAt(i)
@@ -4107,7 +4335,10 @@ dnode.prototype.destroy = function () {
 };
 
 })(require("__browserify_process"))
-},{"stream":6,"dnode-protocol":21,"jsonify":22,"__browserify_process":9}],21:[function(require,module,exports){var EventEmitter = require('events').EventEmitter;
+},{"stream":6,"jsonify":23,"dnode-protocol":24,"__browserify_process":9}],23:[function(require,module,exports){exports.parse = require('./lib/parse');
+exports.stringify = require('./lib/stringify');
+
+},{"./lib/parse":25,"./lib/stringify":26}],24:[function(require,module,exports){var EventEmitter = require('events').EventEmitter;
 var scrubber = require('./lib/scrub');
 var objectKeys = require('./lib/keys');
 var forEach = require('./lib/foreach');
@@ -4233,23 +4464,7 @@ Proto.prototype.apply = function (f, args) {
     catch (err) { this.emit('error', err) }
 };
 
-},{"events":7,"./lib/scrub":23,"./lib/keys":24,"./lib/foreach":25,"./lib/is_enum":26}],22:[function(require,module,exports){exports.parse = require('./lib/parse');
-exports.stringify = require('./lib/stringify');
-
-},{"./lib/parse":27,"./lib/stringify":28}],24:[function(require,module,exports){module.exports = Object.keys || function (obj) {
-    var keys = [];
-    for (var key in obj) keys.push(key);
-    return keys;
-};
-
-},{}],25:[function(require,module,exports){module.exports = function forEach (xs, f) {
-    if (xs.forEach) return xs.forEach(f)
-    for (var i = 0; i < xs.length; i++) {
-        f.call(xs, xs[i], i);
-    }
-}
-
-},{}],27:[function(require,module,exports){var at, // The index of the current character
+},{"events":7,"./lib/scrub":27,"./lib/keys":28,"./lib/foreach":29,"./lib/is_enum":30}],25:[function(require,module,exports){var at, // The index of the current character
     ch, // The current character
     escapee = {
         '"':  '"',
@@ -4523,7 +4738,7 @@ module.exports = function (source, reviver) {
     }({'': result}, '')) : result;
 };
 
-},{}],28:[function(require,module,exports){var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
+},{}],26:[function(require,module,exports){var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
     escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
     gap,
     indent,
@@ -4678,7 +4893,20 @@ module.exports = function (value, replacer, space) {
     return str('', {'': value});
 };
 
-},{}],26:[function(require,module,exports){var objectKeys = require('./keys');
+},{}],28:[function(require,module,exports){module.exports = Object.keys || function (obj) {
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    return keys;
+};
+
+},{}],29:[function(require,module,exports){module.exports = function forEach (xs, f) {
+    if (xs.forEach) return xs.forEach(f)
+    for (var i = 0; i < xs.length; i++) {
+        f.call(xs, xs[i], i);
+    }
+}
+
+},{}],30:[function(require,module,exports){var objectKeys = require('./keys');
 
 module.exports = function (obj, key) {
     if (Object.prototype.propertyIsEnumerable) {
@@ -4691,7 +4919,7 @@ module.exports = function (obj, key) {
     return false;
 };
 
-},{"./keys":24}],23:[function(require,module,exports){var traverse = require('traverse');
+},{"./keys":28}],27:[function(require,module,exports){var traverse = require('traverse');
 var objectKeys = require('./keys');
 var forEach = require('./foreach');
 
@@ -4764,7 +4992,7 @@ Scrubber.prototype.unscrub = function (msg, f) {
     return args;
 };
 
-},{"./keys":24,"./foreach":25,"traverse":29}],29:[function(require,module,exports){var traverse = module.exports = function (obj) {
+},{"./keys":28,"./foreach":29,"traverse":31}],31:[function(require,module,exports){var traverse = module.exports = function (obj) {
     return new Traverse(obj);
 };
 
