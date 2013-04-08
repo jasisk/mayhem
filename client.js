@@ -23,7 +23,7 @@ domready(function(){
 
   window.addEventListener("resize", function(){
     textbox.style.height = window.innerHeight + "px";
-    iframe.style.height = window.innerHeight + "px";    
+    iframe.style.height = window.innerHeight + "px";
   }, false);
   document.body.appendChild(textbox);
   document.body.appendChild(iframe);
@@ -52,6 +52,11 @@ domready(function(){
         textbox.style.display = "block";
         textbox.textContent = text;
         if (cb) { cb("Set text."); }
+      },
+      exit: function(src, cb){
+        src = src || "about:blank";
+        if (cb) { cb("exiting."); }
+        window.location = src;
       }
     });
     d.on('remote', function(remote){
