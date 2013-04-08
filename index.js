@@ -11,7 +11,7 @@ var clients = {};
 var remotes = {};
 
 var server = http.createServer(ecstatic);
-server.listen(8008);
+server.listen(8080);
 
 var sock = shoe(function(stream){
   var metadata = {}, id;
